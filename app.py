@@ -9,6 +9,7 @@ import html as html_mod
 import time
 
 import streamlit as st
+import streamlit.components.v1 as components
 from pygments import highlight as pyg_highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
@@ -127,28 +128,39 @@ def _heap_children_html(entry: HeapEntry) -> str:
 def _code_viewer(source: str, line_no: int, event: str) -> None:
     bg = _HL_BG.get(event, _HL_BG["line"])
     border = _HL_BORDER.get(event, _HL_BORDER["line"])
-    fmt = HtmlFormatter(
-        linenos="table",
-        hl_lines=[line_no],
-        cssclass="pyg",
-        style="monokai",
-    )
-    html = pyg_highlight(source, _LEXER, fmt)
+    fmt = HtmlFormatter(nowrap=True, style="monokai")
     css = fmt.get_style_defs(".pyg")
-    extra = f"""
-    .pyg .hll {{
-        background-color: {bg} !important;
-        border-left: 3px solid {border};
-        display: block;
+
+    lines = source.rstrip("\n").split("\n")
+    rows: list[str] = []
+    for i, line in enumerate(lines, 1):
+        highlighted = pyg_highlight(line + "\n", _LEXER, fmt).rstrip("\n")
+        num = (
+            f'<span style="color:#555;user-select:none;display:inline-block;'
+            f'width:2.5em;text-align:right;padding-right:12px;flex-shrink:0;">{i}</span>'
+        )
+        code_span = f'<span style="white-space:pre;">{highlighted}</span>'
+        if i == line_no:
+            rows.append(
+                f'<div style="display:flex;background:{bg};border-left:3px solid {border};'
+                f'padding:1px 4px 1px 4px;">{num}{code_span}</div>'
+            )
+        else:
+            rows.append(f'<div style="display:flex;padding:1px 4px 1px 7px;">{num}{code_span}</div>')
+
+    code_html = "\n".join(rows)
+    height = max(120, len(lines) * 26 + 30)
+    full_html = f"""<!DOCTYPE html><html><head><style>
+    {css}
+    body {{ margin:0; background:#1e1e1e; }}
+    .pyg {{
+        background:#1e1e1e; padding:10px 6px; border-radius:6px;
+        font-family:'Consolas','Courier New','Liberation Mono',monospace;
+        font-size:14px; line-height:1.65;
+        overflow-x:auto; overflow-y:auto; max-height:500px;
     }}
-    .pyg {{ background:#1e1e1e; padding:8px; border-radius:6px;
-            overflow-x:auto; max-height:520px; overflow-y:auto; }}
-    .pyg pre {{ margin:0; font-size:0.88em; line-height:1.6; }}
-    .pyg td.linenos pre {{ margin:0; padding-right:10px; color:#666;
-                           user-select:none; }}
-    .pyg td.code pre {{ margin:0; }}
-    """
-    st.markdown(f"<style>{css}\n{extra}</style>{html}", unsafe_allow_html=True)
+    </style></head><body><div class="pyg">{code_html}</div></body></html>"""
+    components.html(full_html, height=height, scrolling=True)
 
 
 # ── Page config + session state init ────────────────────────────────────
