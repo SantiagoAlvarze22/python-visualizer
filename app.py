@@ -296,6 +296,10 @@ def _go_last() -> None:
 
 
 def _toggle_play() -> None:
+    r = st.session_state.get("trace_result")
+    if not st.session_state.playing and r and r.snapshots:
+        if st.session_state.step_index >= len(r.snapshots) - 1:
+            st.session_state.step_index = 0
     st.session_state.playing = not st.session_state.playing
 
 
