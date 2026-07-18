@@ -128,8 +128,7 @@ def _heap_children_html(entry: HeapEntry) -> str:
 def _code_viewer(source: str, line_no: int, event: str) -> None:
     bg = _HL_BG.get(event, _HL_BG["line"])
     border = _HL_BORDER.get(event, _HL_BORDER["line"])
-    fmt = HtmlFormatter(nowrap=True, style="monokai")
-    css = fmt.get_style_defs(".pyg")
+    fmt = HtmlFormatter(nowrap=True, style="monokai", noclasses=True)
 
     lines = source.rstrip("\n").split("\n")
     rows: list[str] = []
@@ -142,29 +141,27 @@ def _code_viewer(source: str, line_no: int, event: str) -> None:
         code_span = f'<span style="white-space:pre;">{highlighted}</span>'
         if i == line_no:
             rows.append(
-                f'<div id="hl" style="display:flex;background:{bg};border-left:3px solid {border};'
+                f'<div id="cv-hl" style="display:flex;background:{bg};border-left:3px solid {border};'
                 f'padding:1px 4px 1px 4px;">{num}{code_span}</div>'
             )
         else:
             rows.append(f'<div style="display:flex;padding:1px 4px 1px 7px;">{num}{code_span}</div>')
 
     code_html = "\n".join(rows)
-    height = max(120, len(lines) * 26 + 30)
-    full_html = f"""<!DOCTYPE html><html><head><style>
-    {css}
-    body {{ margin:0; background:#1e1e1e; }}
-    .pyg {{
-        background:#1e1e1e; padding:10px 6px; border-radius:6px;
-        font-family:'Consolas','Courier New','Liberation Mono',monospace;
-        font-size:14px; line-height:1.65;
-        overflow-x:auto; overflow-y:auto; max-height:500px;
-    }}
-    </style></head><body><div class="pyg">{code_html}</div>
-    <script>
-    var hl = document.getElementById('hl');
-    if (hl) hl.scrollIntoView({{behavior:'instant',block:'center'}});
-    </script></body></html>"""
-    components.html(full_html, height=height, scrolling=True)
+    st.markdown(
+        f'<div id="cv-box" style="background:#1e1e1e;padding:10px 6px;border-radius:6px;'
+        f"font-family:'Consolas','Courier New','Liberation Mono',monospace;"
+        f'font-size:14px;line-height:1.65;overflow-x:auto;overflow-y:auto;max-height:500px;">'
+        f"{code_html}</div>",
+        unsafe_allow_html=True,
+    )
+    components.html(
+        """<script>
+        var el = window.parent.document.getElementById('cv-hl');
+        if (el) el.scrollIntoView({behavior:'instant',block:'center'});
+        </script>""",
+        height=0,
+    )
 
 
 # ── Page config + session state init ────────────────────────────────────
