@@ -142,7 +142,7 @@ def _code_viewer(source: str, line_no: int, event: str) -> None:
         code_span = f'<span style="white-space:pre;">{highlighted}</span>'
         if i == line_no:
             rows.append(
-                f'<div style="display:flex;background:{bg};border-left:3px solid {border};'
+                f'<div id="hl" style="display:flex;background:{bg};border-left:3px solid {border};'
                 f'padding:1px 4px 1px 4px;">{num}{code_span}</div>'
             )
         else:
@@ -159,7 +159,11 @@ def _code_viewer(source: str, line_no: int, event: str) -> None:
         font-size:14px; line-height:1.65;
         overflow-x:auto; overflow-y:auto; max-height:500px;
     }}
-    </style></head><body><div class="pyg">{code_html}</div></body></html>"""
+    </style></head><body><div class="pyg">{code_html}</div>
+    <script>
+    var hl = document.getElementById('hl');
+    if (hl) hl.scrollIntoView({{behavior:'instant',block:'center'}});
+    </script></body></html>"""
     components.html(full_html, height=height, scrolling=True)
 
 
