@@ -189,29 +189,6 @@ for _k, _v in {
 st.title("\U0001f40d Visualizador de Ejecución Python")
 
 
-def _on_example() -> None:
-    name = st.session_state._example_sel
-    if name in EXAMPLES:
-        st.session_state.source_code = EXAMPLES[name]
-    st.session_state.stdin_text = ""
-    st.session_state.playing = False
-    st.session_state.step_index = 0
-    st.session_state.trace_result = None
-    st.session_state.trace_hash = None
-
-
-top_l, top_r = st.columns([3, 1])
-with top_l:
-    st.selectbox(
-        "Ejemplo",
-        list(EXAMPLES.keys()),
-        key="_example_sel",
-        on_change=_on_example,
-    )
-with top_r:
-    st.write("")
-    run_clicked = st.button("▶ Ejecutar", use_container_width=True)
-
 source: str = st.text_area(
     "código",
     height=180,
@@ -239,21 +216,38 @@ if (
     st.session_state.trace_result = None
     st.session_state.trace_hash = None
 
-# ── Execute ─────────────────────────────────────────────────────────────
+# ── Play / Pause button (always visible) ──────────────────────────────
 
-if run_clicked:
+
+def _main_play() -> None:
+    if st.session_state.trace_result is None:
+        st.session_state._run_requested = True
+    else:
+        snaps = st.session_state.trace_result.snapshots
+        if not st.session_state.playing and snaps:
+            if st.session_state.step_index >= len(snaps) - 1:
+                st.session_state.step_index = 0
+        st.session_state.playing = not st.session_state.playing
+
+
+_play_label = "⏸ Pausa" if st.session_state.playing else "▶ Play"
+st.button(_play_label, key="btn_main_play", on_click=_main_play, use_container_width=True)
+
+# ── Execute if requested ───────────────────────────────────────────────
+
+if st.session_state.get("_run_requested"):
+    st.session_state._run_requested = False
     with st.spinner("Trazando…"):
         st.session_state.trace_result = run_trace(source, stdin_text=stdin_text)
     st.session_state.trace_hash = source_hash
     st.session_state._traced_source = source
     st.session_state.step_index = 0
-    st.session_state.playing = False
+    st.session_state.playing = True
 
 # ── Guard: no trace yet ─────────────────────────────────────────────────
 
 result = st.session_state.trace_result
 if result is None:
-    st.info("Pega código Python y presiona **Ejecutar**.")
     st.stop()
 
 # Termination warnings
@@ -306,15 +300,9 @@ def _execution_viewer() -> None:
         st.session_state.step_index = _max
         st.session_state.playing = False
 
-    def _toggle_play() -> None:
-        if not st.session_state.playing:
-            if st.session_state.step_index >= _max:
-                st.session_state.step_index = 0
-        st.session_state.playing = not st.session_state.playing
-
     st.slider("paso", 0, _max, key="step_index", label_visibility="collapsed")
 
-    c1, c2, c3, c4, c5, c6 = st.columns([1, 1, 1, 1, 2, 3])
+    c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 3])
     with c1:
         st.button("⏮ Inicio", key="btn_first", on_click=_go_first, use_container_width=True)
     with c2:
@@ -324,9 +312,6 @@ def _execution_viewer() -> None:
     with c4:
         st.button("⏭ Final", key="btn_last", on_click=_go_last, use_container_width=True)
     with c5:
-        play_label = "⏸ Pausa" if st.session_state.playing else "▶ Play"
-        st.button(play_label, key="btn_play", on_click=_toggle_play, use_container_width=True)
-    with c6:
         st.select_slider(
             "vel",
             options=[2000, 1000, 500, 250, 125],
@@ -495,7 +480,10 @@ def _execution_viewer() -> None:
         if st.session_state.step_index < _max:
             time.sleep(st.session_state.speed_ms / 1000)
             st.session_state._auto_advance = True
-            st.rerun(scope="fragment")
+            try:
+                st.rerun(scope="fragment")
+            except Exception:
+                st.rerun()
         else:
             st.session_state.playing = False
 
