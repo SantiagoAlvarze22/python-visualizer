@@ -351,6 +351,8 @@ with c6:
 snap = snapshots[st.session_state.step_index]
 current_frame = snap.call_stack[-1] if snap.call_stack else None
 
+st.markdown('<div id="step-anchor"></div>', unsafe_allow_html=True)
+
 # Step label
 lbl = f"**Paso {snap.step_index + 1} / {len(snapshots)}** — "
 if snap.event == "line":
@@ -507,6 +509,17 @@ with col_state:
             st.code(stdout_text, language=None)
         else:
             st.caption("(sin salida)")
+
+# ── Auto-scroll to step area ───────────────────────────────────────────
+
+if st.session_state.step_index > 0 or st.session_state.playing:
+    components.html(
+        """<script>
+        const anchor = window.parent.document.getElementById('step-anchor');
+        if (anchor) anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+        </script>""",
+        height=0,
+    )
 
 # ── Autoplay ────────────────────────────────────────────────────────────
 
